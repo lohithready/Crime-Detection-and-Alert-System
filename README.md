@@ -1,7 +1,5 @@
 # Crime-Detection-and-Alert-System
-Here's a README.md file suitable for your GitHub repository, incorporating details about your project, the dataset, and the model, based on the code and discussions we've had:
-
-markdown
+ markdown
 # UCF-Crime Violence Detection using CNN-LSTM
 
 This project implements a deep learning model for detecting violent or anomalous events in video sequences, leveraging the UCF-Crime dataset. The core architecture combines a Convolutional Neural Network (CNN) for spatial feature extraction with a Long Short-Term Memory (LSTM) network for capturing temporal dependencies.
@@ -120,8 +118,9 @@ This project is designed to be run primarily within a Kaggle Notebook environmen
 ## Results
 
 After training, the notebook will output training and validation accuracy/loss plots, and the best performing model will be saved as `violence_detector_ucf_crime_binary_image_sequence.h5`.
+![image](https://github.com/user-attachments/assets/4ca06e02-09dd-481e-94e4-e404ca971a1e)
+![image](https://github.com/user-attachments/assets/53ce18f9-c2a8-4a63-be57-1312ab0e8de2)
 
-*(Once you have results, you can add screenshots of your training history plots here and discuss key metrics like final accuracy, precision, and recall on the validation set.)*
 
 ## Contributing
 
@@ -129,12 +128,5 @@ Feel free to open issues or submit pull requests for any improvements or bug fix
 
 ## License
 
-*(Choose a license, e.g., MIT, Apache 2.0, etc. If unsure, MIT is a good open-source choice.)*
-
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
-## Acknowledgements
-
-* UCF-Crime Dataset
-* Kaggle platform and `kagglehub` for dataset access.
-* TensorFlow and Keras for the deep learning framework.
