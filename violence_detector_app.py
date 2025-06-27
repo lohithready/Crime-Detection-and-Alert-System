@@ -19,31 +19,34 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLRO
 from sklearn.model_selection import train_test_split
 from collections import deque
 
-# --- Configuration ---
-# Replace with your actual bot token and chat ID
-TELEGRAM_BOT_TOKEN = "7833059631:AAGccuMt4xTTpqBzT8OeCNLPBmVrkIoHsQY"
-TELEGRAM_CHAT_ID = "-1002676190861"     # <--- REPLACE THIS
+#Config 
+#Replace with your actual bot token and chat ID(use chatinfobot in telegram)
+TELEGRAM_BOT_TOKEN = "xxxxxxxxxx:AAAccccXXXXwwwwweeeee"
+TELEGRAM_CHAT_ID = "-100000xxxxx"     
 
-# Model and Data Paths
+#Data Paths
 DATASET_ROOT = 'D:\draftt\data\Real Life Violence Dataset' # <--- IMPORTANT: SET THIS TO YOUR DOWNLOADED DATASET PATH
 MODEL_SAVE_PATH = 'violence_detector_mobilenet_lstm.h5'
 
-# Model Hyperparameters (Adjust as needed)
-FRAME_HEIGHT, FRAME_WIDTH = 128, 128
-SEQUENCE_LENGTH = 16 # Number of frames per input sequence for LSTM
-BATCH_SIZE = 8       # Adjust based on your GPU memory
-EPOCHS = 20          # Start with a lower number, increase if needed
-VIOLENCE_THRESHOLD = 0.75 # Probability threshold for violence detection
-ALERT_COOLDOWN_SECONDS = 30 # Don't send alerts too frequently
+#Hyperparams  
 
-# Global variables for detection and display
+FRAME_HEIGHT, FRAME_WIDTH = 128, 128
+SEQUENCE_LENGTH = 16  
+BATCH_SIZE = 8        
+EPOCHS = 20           
+VIOLENCE_THRESHOLD = 0.75  
+ALERT_COOLDOWN_SECONDS = 30  
+
+#Global variables for detection and display
+
 violence_model = None
 cap = None
 processing_thread = None
 stop_event = threading.Event()
 last_alert_time = 0
 
-# --- Telegram Bot Function ---
+#Telegram Bot Function  
+
 async def send_telegram_alert(message_text, image_path=None, video_path=None):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Telegram bot token or chat ID not set. Cannot send alert.")
@@ -54,12 +57,12 @@ async def send_telegram_alert(message_text, image_path=None, video_path=None):
         if image_path and os.path.exists(image_path):
             with open(image_path, 'rb') as image:
                 await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=image)
-            # Optional: Delete the image after sending to clean up
+            #Optional: Delete the image after sending to clean up
             os.remove(image_path)
         if video_path and os.path.exists(video_path):
             with open(video_path, 'rb') as video:
                 await bot.send_video(chat_id=TELEGRAM_CHAT_ID, video=video)
-            # Optional: Delete the video after sending
+            #Optional: Delete the video after sending
             os.remove(video_path)
         print("Telegram alert sent successfully!")
     except telegram.error.TelegramError as e:
@@ -72,35 +75,35 @@ def run_telegram_async(func, *args, **kwargs):
         asyncio.run(func(*args, **kwargs))
     threading.Thread(target=wrapper).start()
 
-# --- Model Definition (Based on Kaggle Notebook's approach) ---
+#Model Definition 
+
 def build_violence_detection_model(input_shape=(SEQUENCE_LENGTH, FRAME_HEIGHT, FRAME_WIDTH, 3), num_classes=1):
-    # Load a pre-trained 2D CNN (MobileNetV2)
-    # We'll use TimeDistributed to apply it to each frame in the sequence
+    #Load a pre-trained 2D CNN (MobileNetV2) 
     base_cnn = MobileNetV2(
         weights='imagenet',
-        include_top=False, # Don't include the classification head
+        include_top=False,  
         input_shape=(input_shape[1], input_shape[2], input_shape[3]) # (height, width, channels)
     )
-    # Freeze the base CNN layers initially. Fine-tuning later (optional)
+    #Freeze the base CNN layers initially. Fine-tuning later (optional)
     base_cnn.trainable = False
 
     model = Sequential([
-        # Apply the base CNN to each frame in the sequence
+        #Apply the base CNN to each frame in the sequence
         TimeDistributed(base_cnn, input_shape=input_shape),
-        TimeDistributed(GlobalAveragePooling2D()), # Pooling for each frame's features
-        LSTM(128, return_sequences=False), # LSTM to learn temporal patterns
+        TimeDistributed(GlobalAveragePooling2D()),                     #Pooling  
+        LSTM(128, return_sequences=False),                             #LSTM  
         Dropout(0.5),
         Dense(64, activation='relu'),
         Dropout(0.5),
-        Dense(num_classes, activation='sigmoid') # Sigmoid for binary classification (violence/non-violence)
+        Dense(num_classes, activation='sigmoid') #Sigmoid for binary classification (violence/non-violence)
     ])
 
-    model.compile(optimizer=Adam(learning_rate=0.0001), # Start with a lower learning rate
+    model.compile(optimizer=Adam(learning_rate=0.0001),  
                   loss='binary_crossentropy',
                   metrics=['accuracy', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
     return model
 
-# --- Data Preprocessing and Generation (Modified) ---
+#Data Preprocessing
 def get_video_paths_and_labels(dataset_root):
     violence_dir = os.path.join(dataset_root, 'Violence')
     non_violence_dir = os.path.join(dataset_root, 'NonViolence')
@@ -115,13 +118,13 @@ def get_video_paths_and_labels(dataset_root):
     for filename in tqdm(os.listdir(violence_dir)):
         if filename.endswith(('.mp4', '.avi', '.mov')):
             video_paths.append(os.path.join(violence_dir, filename))
-            labels.append(1) # 1 for violence
+            labels.append(1) #1 for violence
 
     print("Collecting non-violent video paths...")
     for filename in tqdm(os.listdir(non_violence_dir)):
         if filename.endswith(('.mp4', '.avi', '.mov')):
             video_paths.append(os.path.join(non_violence_dir, filename))
-            labels.append(0) # 0 for non-violence
+            labels.append(0) #0 for non-violence
 
     return video_paths, labels
 
@@ -134,28 +137,26 @@ def extract_frames_from_video_for_sequence(video_path, start_frame, sequence_len
         print(f"Warning: Could not open video {video_path}. Skipping.")
         return None
 
-    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame) # Set starting frame
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)  
 
     frames = []
     for _ in range(sequence_length):
         ret, frame = cap.read()
         if not ret:
-            # If video ends prematurely, pad with zeros
             while len(frames) < sequence_length:
-                # Create a black frame (all zeros) of the target size
                 black_frame = np.zeros((*target_size, 3), dtype=np.float32)
                 frames.append(black_frame)
             break
 
         frame = cv2.resize(frame, target_size)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Convert to RGB
-        frame = frame / 255.0 # Normalize to [0, 1]
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+        frame = frame / 255.0  
         frames.append(frame)
     cap.release()
 
     if len(frames) == sequence_length:
         return np.array(frames, dtype=np.float32)
-    return None # Return None if we couldn't get a full sequence
+    return None  
 
 
 class VideoSequenceDataGenerator(tf.keras.utils.Sequence):
@@ -166,7 +167,7 @@ class VideoSequenceDataGenerator(tf.keras.utils.Sequence):
         self.target_size = target_size
         self.batch_size = batch_size
         self.shuffle = shuffle
-        self.sequence_indices = [] # Stores (video_path_idx, start_frame_idx) for each potential sequence
+        self.sequence_indices = [] #Stores (video_path_idx, start_frame_idx) for each potential sequence
 
         print("Indexing video sequences for generator...")
         for i, video_path in enumerate(tqdm(self.video_paths)):
@@ -177,9 +178,8 @@ class VideoSequenceDataGenerator(tf.keras.utils.Sequence):
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             cap.release()
 
-            # Generate start indices for overlapping sequences
             for start_frame_idx in range(0, total_frames - self.sequence_length + 1, self.sequence_length // 2):
-                self.sequence_indices.append((i, start_frame_idx)) # Store index of video path and start frame
+                self.sequence_indices.append((i, start_frame_idx))  
 
         print(f"Total sequence indices generated: {len(self.sequence_indices)}")
         self.on_epoch_end()
@@ -204,23 +204,22 @@ class VideoSequenceDataGenerator(tf.keras.utils.Sequence):
 
         for i, (video_path_idx, start_frame_idx) in enumerate(batch_sequence_indices):
             video_path = self.video_paths[video_path_idx]
-            label = self.labels[video_path_idx] # Label is per video
+            label = self.labels[video_path_idx] 
             
             sequence_frames = extract_frames_from_video_for_sequence(video_path, start_frame_idx, self.sequence_length, self.target_size)
             
             if sequence_frames is not None:
                 X[i,] = sequence_frames
                 y[i] = label
-            else:
-                # Handle cases where sequence extraction failed (e.g., corrupted video)
-                # For simplicity, we'll fill with zeros and assume a 'normal' label
-                # A more robust solution might skip this batch item or log the issue.
+            else: 
                 X[i,] = np.zeros((self.sequence_length, self.target_size[0], self.target_size[1], 3), dtype=np.float32)
-                y[i] = 0 # Or a default "normal" label
+                y[i] = 0 
+                
 
         return X, y
 
-# --- Model Training Function ---
+#Model Training
+
 def train_model():
     global violence_model
 
@@ -230,13 +229,13 @@ def train_model():
                                            "and extract it to this path.")
         return
 
-    # Check if model already exists and ask to retrain
+    #Check if model already exists and ask to retrain
     if os.path.exists(MODEL_SAVE_PATH):
         if not messagebox.askyesno("Model Exists", "Model already trained. Do you want to retrain it?"):
             try:
                 violence_model = load_model(MODEL_SAVE_PATH)
                 messagebox.showinfo("Model Loaded", "Pre-trained model loaded successfully.")
-                # Update status label with the correct style
+                #Update status  
                 status_label.config(text="Status: Model loaded from disk.", style="Green.TLabel")
                 return
             except Exception as e:
@@ -250,9 +249,9 @@ def train_model():
 
     video_paths, labels = get_video_paths_and_labels(DATASET_ROOT)
 
-    # Split into train and validation sets
+    #train and validation sets
     train_paths, val_paths, train_labels, val_labels = train_test_split(
-        video_paths, labels, test_size=0.2, random_state=42, stratify=labels # stratify to maintain label distribution
+        video_paths, labels, test_size=0.2, random_state=42, stratify=labels 
     )
 
     try:
@@ -272,10 +271,8 @@ def train_model():
     root.update_idletasks()
     root.update()
 
-    violence_model = build_violence_detection_model()
-    # violence_model.summary() # Uncomment to see model summary
-
-    # Callbacks for Training
+    violence_model = build_violence_detection_model() 
+     
     checkpoint = ModelCheckpoint(MODEL_SAVE_PATH, monitor='val_loss', save_best_only=True, mode='min', verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', patience=7, restore_best_weights=True, verbose=1)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6, verbose=1)
@@ -286,8 +283,8 @@ def train_model():
             epochs=EPOCHS,
             validation_data=val_generator,
             callbacks=[checkpoint, early_stopping, reduce_lr],
-            # workers=4, # Adjust based on your CPU cores
-            # use_multiprocessing=True # For faster data loading
+            #workers=4, #Adjust based on CPU cores
+            #use_multiprocessing=True for faster data loading
         )
         messagebox.showinfo("Training Complete", "Model training finished successfully. Best model saved.")
         status_label.config(text="Status: Model trained and ready.", style="Green.TLabel")
@@ -295,7 +292,7 @@ def train_model():
         messagebox.showerror("Training Error", f"An error occurred during training: {e}")
         status_label.config(text="Status: Training failed.", style="Red.TLabel")
 
-# --- Core Detection Logic for GUI ---
+#Core Detection Logic for GUI 
 def process_video_stream(video_source):
     global cap, last_alert_time, violence_model, stop_event
     cap = cv2.VideoCapture(video_source)
@@ -303,83 +300,75 @@ def process_video_stream(video_source):
         messagebox.showerror("Error", "Could not open video source.")
         return
 
-    frame_buffer = deque(maxlen=SEQUENCE_LENGTH) # Store frames for sequence prediction
-    violence_detected_frames_count = 0 # Counter for consecutive violent frames
-    REQUIRED_CONSECUTIVE_VIOLENT_FRAMES = 5 # Number of consecutive violent frames to trigger alert
+    frame_buffer = deque(maxlen=SEQUENCE_LENGTH) #Store frames for sequence prediction
+    violence_detected_frames_count = 0 #Counter for consecutive violent frames
+    REQUIRED_CONSECUTIVE_VIOLENT_FRAMES = 5 #Number of consecutive violent frames to trigger alert
 
     print("Starting video stream processing...")
     while not stop_event.is_set():
         ret, frame = cap.read()
-        if not ret:
-            # If it's a file, loop or stop. If webcam, try again.
+        if not ret: 
             if isinstance(video_source, str) and video_source.endswith(('.mp4', '.avi', '.mov')):
                 print("End of video file.")
                 break
             continue
 
-        # Convert frame to RGB for PIL and display
+        #Convert frame to RGB for PIL and display
         frame_display = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img = Image.fromarray(frame_display)
-        imgtk = ImageTk.PhotoImage(image=img.resize((640, 480))) # Resize for display
+        imgtk = ImageTk.PhotoImage(image=img.resize((640, 480)))  
 
         panel.imgtk = imgtk
-        panel.config(image=imgtk)
-
-        # Preprocess frame for model input
+        panel.config(image=imgtk) 
         frame_model_input = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
-        frame_model_input = cv2.cvtColor(frame_model_input, cv2.COLOR_BGR2RGB) / 255.0 # Normalize
-
-        # Add frame to buffer
+        frame_model_input = cv2.cvtColor(frame_model_input, cv2.COLOR_BGR2RGB) / 255.0 #Normalize
         frame_buffer.append(frame_model_input)
 
-        if len(frame_buffer) == SEQUENCE_LENGTH:
-            # Only perform prediction if the buffer has enough frames
-            processed_sequence = np.array(frame_buffer, dtype=np.float32) # Shape: (SEQUENCE_LENGTH, H, W, C)
-            processed_sequence = np.expand_dims(processed_sequence, axis=0) # Add batch dimension (1, S, H, W, C)
+        if len(frame_buffer) == SEQUENCE_LENGTH: 
+            processed_sequence = np.array(frame_buffer, dtype=np.float32)  
+            processed_sequence = np.expand_dims(processed_sequence, axis=0)  
 
             if violence_model:
                 try:
-                    violence_prob = violence_model.predict(processed_sequence, verbose=0)[0][0] # Get the probability
-                    status_label.config(text=f"Violence Probability: {violence_prob:.4f}", style="Blue.TLabel") # Use style
+                    violence_prob = violence_model.predict(processed_sequence, verbose=0)[0][0]  
+                    status_label.config(text=f"Violence Probability: {violence_prob:.4f}", style="Blue.TLabel")  
 
                     current_time = time.time()
                     if violence_prob > VIOLENCE_THRESHOLD:
                         violence_detected_frames_count += 1
                         if violence_detected_frames_count >= REQUIRED_CONSECUTIVE_VIOLENT_FRAMES:
-                            status_label.config(text="Status: VIOLENCE DETECTED!", style="Red.TLabel") # Use style
+                            status_label.config(text="Status: VIOLENCE DETECTED!", style="Red.TLabel")  
                             if (current_time - last_alert_time) > ALERT_COOLDOWN_SECONDS:
-                                alert_message = f"🚨 VIOLENCE ALERT! Probability: {violence_prob:.2f}"
-                                # Save the current frame for the alert
+                                alert_message = f"🚨 VIOLENCE ALERT! Probability: {violence_prob:.2f}" 
                                 alert_image_path = "detected_violence.jpg"
-                                # We need to convert the current frame_display (RGB PIL image) back to BGR for OpenCV save
+                             
                                 cv2.imwrite(alert_image_path, cv2.cvtColor(frame_display, cv2.COLOR_RGB2BGR))
                                 run_telegram_async(send_telegram_alert, alert_message, image_path=alert_image_path)
                                 last_alert_time = current_time
-                                violence_detected_frames_count = 0 # Reset counter after sending alert
+                                violence_detected_frames_count = 0  
                     else:
                         violence_detected_frames_count = 0
-                        status_label.config(text="Status: Normal", style="Green.TLabel") # Use style
+                        status_label.config(text="Status: Normal", style="Green.TLabel")  
                 except Exception as e:
-                    status_label.config(text=f"Prediction Error: {e}", style="Orange.TLabel") # Use style
+                    status_label.config(text=f"Prediction Error: {e}", style="Orange.TLabel")  
                     print(f"Prediction Error: {e}")
             else:
-                status_label.config(text="Status: Model not loaded.", style="Orange.TLabel") # Use style
+                status_label.config(text="Status: Model not loaded.", style="Orange.TLabel")  
         else:
-            status_label.config(text=f"Status: Buffering frames... ({len(frame_buffer)}/{SEQUENCE_LENGTH})", style="Gray.TLabel") # Use style
+            status_label.config(text=f"Status: Buffering frames... ({len(frame_buffer)}/{SEQUENCE_LENGTH})", style="Gray.TLabel")  
 
-        # Update the GUI (important for smooth display)
         root.update_idletasks()
         root.update()
 
     cap.release()
     cv2.destroyAllWindows()
     panel.config(image='')
-    status_label.config(text="Status: Idle", style="Black.TLabel") # Use style
-    if not stop_event.is_set(): # Only show if not stopped by user
+    status_label.config(text="Status: Idle", style="Black.TLabel")  
+    if not stop_event.is_set():  
         messagebox.showinfo("Finished", "Video processing complete.")
 
 
-# --- GUI Functions ---
+#GUI  
 def start_webcam():
     global processing_thread, stop_event, last_alert_time
     if processing_thread and processing_thread.is_alive():
@@ -391,11 +380,11 @@ def start_webcam():
         return
 
     stop_event.clear()
-    last_alert_time = 0 # Reset alert cooldown
-    processing_thread = threading.Thread(target=process_video_stream, args=(0,)) # 0 for webcam
+    last_alert_time = 0  
+    processing_thread = threading.Thread(target=process_video_stream, args=(0,))  
     processing_thread.daemon = True
     processing_thread.start()
-    status_label.config(text="Status: Webcam active", style="Blue.TLabel") # Use style
+    status_label.config(text="Status: Webcam active", style="Blue.TLabel")  
 
 def upload_video():
     global processing_thread, stop_event, last_alert_time
@@ -413,20 +402,20 @@ def upload_video():
     )
     if video_path:
         stop_event.clear()
-        last_alert_time = 0 # Reset alert cooldown
+        last_alert_time = 0  
         processing_thread = threading.Thread(target=process_video_stream, args=(video_path,))
         processing_thread.daemon = True
         processing_thread.start()
-        status_label.config(text=f"Status: Processing '{os.path.basename(video_path)}'", style="Blue.TLabel") # Use style
+        status_label.config(text=f"Status: Processing '{os.path.basename(video_path)}'", style="Blue.TLabel")  
 
 def stop_processing():
     global cap, processing_thread, stop_event
     if processing_thread and processing_thread.is_alive():
         stop_event.set()
-        processing_thread.join(timeout=5) # Wait for thread to finish
+        processing_thread.join(timeout=5)  
         if processing_thread.is_alive():
             print("Warning: Processing thread did not terminate gracefully.")
-        status_label.config(text="Status: Stopped", style="Black.TLabel") # Use style
+        status_label.config(text="Status: Stopped", style="Black.TLabel")  
         if cap:
             cap.release()
             cv2.destroyAllWindows()
@@ -438,12 +427,10 @@ def on_closing():
     stop_processing()
     root.destroy()
 
-# --- Tkinter GUI Setup ---
+#Tkinter  
 root = tk.Tk()
 root.title("Violence Detection System")
-root.geometry("800x700")
-
-# --- Define Styles for ttk.Label ---
+root.geometry("800x700") 
 style = ttk.Style()
 style.configure("Black.TLabel", foreground="black")
 style.configure("Green.TLabel", foreground="green")
@@ -451,8 +438,7 @@ style.configure("Blue.TLabel", foreground="blue")
 style.configure("Red.TLabel", foreground="red")
 style.configure("Orange.TLabel", foreground="orange")
 style.configure("Gray.TLabel", foreground="gray")
-
-# Top frame for buttons
+ 
 button_frame = ttk.Frame(root, padding="10")
 button_frame.pack(side=tk.TOP, fill=tk.X)
 
@@ -468,25 +454,22 @@ upload_video_btn.pack(side=tk.LEFT, padx=5, pady=5)
 stop_btn = ttk.Button(button_frame, text="Stop", command=stop_processing)
 stop_btn.pack(side=tk.LEFT, padx=5, pady=5)
 
-# Label for displaying video stream
 panel = tk.Label(root, bg="black")
 panel.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-# Status label - now initialized with a style
 status_label = ttk.Label(root, text="Status: Idle", font=("Helvetica", 12), style="Black.TLabel")
 status_label.pack(side=tk.BOTTOM, pady=10)
 
-# Load model if it exists on startup
 if os.path.exists(MODEL_SAVE_PATH):
     try:
         violence_model = load_model(MODEL_SAVE_PATH)
-        status_label.config(text="Status: Model loaded from disk.", style="Green.TLabel") # Use style here
+        status_label.config(text="Status: Model loaded from disk.", style="Green.TLabel") 
         print(f"Model loaded from {MODEL_SAVE_PATH}")
     except Exception as e:
-        status_label.config(text=f"Error loading model: {e}", style="Red.TLabel") # Use style here
+        status_label.config(text=f"Error loading model: {e}", style="Red.TLabel")  
         print(f"Error loading model: {e}")
 else:
-    status_label.config(text="Status: No model found. Click 'Train/Load Model'.", style="Orange.TLabel") # Use style here
+    status_label.config(text="Status: No model found. Click 'Train/Load Model'.", style="Orange.TLabel")  
 
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
