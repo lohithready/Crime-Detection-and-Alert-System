@@ -12,7 +12,6 @@ This project implements a deep learning model for detecting violent or anomalous
 - [Training Details](#training-details)
 - [Results](#results)
 - [Contributing](#contributing)
-- [License](#license)
 - [Acknowledgements](#acknowledgements)
 
 ## Introduction
@@ -124,8 +123,3 @@ After training, the notebook will output training and validation accuracy/loss p
 ## Contributing
 
 Feel free to open issues or submit pull requests for any improvements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
