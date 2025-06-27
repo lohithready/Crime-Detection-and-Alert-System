@@ -71,14 +71,14 @@ The deep learning model is a **CNN-LSTM** hybrid.
 
 1.  **Clone the repository**:
     ```bash
-    git clone [https://github.com/your-username/ucf-crime-violence-detection.git](https://github.com/your-username/ucf-crime-violence-detection.git)
-    cd ucf-crime-violence-detection
+    git clone https://github.com/lohithready/Crime-Detection-and-Alert-System.git 
+    cd Crime-Detection-and-Alert-System
     ```
 
 2.  **Create a Conda environment (recommended)**:
     ```bash
-    conda create -n ucf_crime python=3.9
-    conda activate ucf_crime
+    conda create -n crime python=3.9
+    conda activate crime
     ```
 
 3.  **Install dependencies**:
