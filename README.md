@@ -1,5 +1,4 @@
 # Crime-Detection-and-Alert-System
- markdown
 # UCF-Crime Violence Detection using CNN-LSTM
 
 This project implements a deep learning model for detecting violent or anomalous events in video sequences, leveraging the UCF-Crime dataset. The core architecture combines a Convolutional Neural Network (CNN) for spatial feature extraction with a Long Short-Term Memory (LSTM) network for capturing temporal dependencies.
